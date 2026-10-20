@@ -13,6 +13,7 @@ TARGET_CHANNEL_ID = int(os.environ.get('TARGET_CHANNEL_ID', 0))
 
 RACES = ("Blood Elf", "Night Elf", "Draenei", "Dwarf", "Gnome", "Human", "Orc", "Tauren", "Troll", "Undead")
 CLASSES = ("Death Knight", "Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior")
+SPECIAL_DEATH_SOURCES = ("Warlord Krom'zar", "himself/herself")
 CLASS_COLORS = {
     "Death Knight": "#C41E3A",
     "Druid": "#FF7C0A",
@@ -59,11 +60,22 @@ def make_chart_config(labels, values, colors=None):
                         "beginAtZero": True,
                         "precision": 0,
                         "maxTicksLimit": 8,
+                        "fontSize": 16,
+                        "fontStyle": "bold",
                     },
                 }],
-                "xAxes": [{"ticks": {"maxRotation": 60}}],
-                "y": {"beginAtZero": True, "ticks": {"precision": 0}},
-                "x": {"ticks": {"maxRotation": 60}},
+                "xAxes": [{
+                    "ticks": {
+                        "maxRotation": 60,
+                        "fontSize": 16,
+                        "fontStyle": "bold",
+                    },
+                }],
+                "y": {
+                    "beginAtZero": True,
+                    "ticks": {"precision": 0, "font": {"size": 16, "weight": "bold"}},
+                },
+                "x": {"ticks": {"maxRotation": 60, "font": {"size": 16, "weight": "bold"}}},
             },
         },
     }
@@ -100,7 +112,10 @@ class KillLogBot(discord.Client):
             async for message in source_channel.history(limit=None):
                 match = LOG_PATTERN.search(message.content)
                 if match:
-                    data.append(match.groupdict())
+                    record = match.groupdict()
+                    if record["slain_by"].strip().casefold() == record["player"].strip().casefold():
+                        record["slain_by"] = "himself/herself"
+                    data.append(record)
 
             print(f"Successfully extracted {len(data)} kill records.")
 
@@ -146,6 +161,10 @@ class KillLogBot(discord.Client):
             top_mobs = sorted(mob_deaths.items(), key=lambda item: (-item[1], item[0]))[:5]
             top_locations = sorted(location_deaths.items(), key=lambda item: (-item[1], item[0]))[:5]
             class_totals = sorted(class_deaths.items(), key=lambda item: (-item[1], item[0]))
+            special_deaths = {
+                source: mob_deaths.get(source, 0)
+                for source in SPECIAL_DEATH_SOURCES
+            }
 
             chart_specs = [
                 (
@@ -157,6 +176,7 @@ class KillLogBot(discord.Client):
                 ("Deaths by Level Bracket", list(level_deaths), list(level_deaths.values()), None),
                 ("Top 5 Most Dangerous Mobs", [item[0] for item in top_mobs], [item[1] for item in top_mobs], None),
                 ("Top 5 Most Dangerous Locations", [item[0] for item in top_locations], [item[1] for item in top_locations], None),
+                ("Special Deaths by Source", list(special_deaths), list(special_deaths.values()), None),
             ]
 
             timeout = aiohttp.ClientTimeout(total=10)
