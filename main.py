@@ -90,7 +90,12 @@ async def create_chart_url(session, chart_name, chart_config):
             response.raise_for_status()
             chart_result = await response.json()
             if isinstance(chart_result, dict):
-                return chart_result.get("url")
+                chart_url = chart_result.get("url")
+                if chart_url:
+                    return chart_url
+                print(f"Could not generate {chart_name} chart: QuickChart returned {chart_result}")
+            else:
+                print(f"Could not generate {chart_name} chart: unexpected response {chart_result!r}")
     except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
         print(f"Could not generate {chart_name} chart: {e}")
     return None
