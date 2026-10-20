@@ -2,15 +2,25 @@ import asyncio
 import os
 re = __import__('re')
 discord = __import__('discord')
-import requests
+import aiohttp
+from dotenv import load_dotenv
 
-TOKEN = os.environ.get('DISCORD_TOKEN')
+load_dotenv()
+
+DISCORD_BOT_TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
 SOURCE_CHANNEL_ID = int(os.environ.get('SOURCE_CHANNEL_ID', 0))
 TARGET_CHANNEL_ID = int(os.environ.get('TARGET_CHANNEL_ID', 0))
 
-# Regex pattern matching: "Etheria the level 34 Draenei Shaman has been slain by Scarlet Wizard in Scarlet Monastery."
+RACES = ("Blood Elf", "Night Elf", "Draenei", "Dwarf", "Gnome", "Human", "Orc", "Tauren", "Troll", "Undead")
+CLASSES = ("Death Knight", "Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior")
+race_pattern = "|".join(re.escape(name) for name in sorted(RACES, key=len, reverse=True))
+class_pattern = "|".join(re.escape(name) for name in sorted(CLASSES, key=len, reverse=True))
+
 LOG_PATTERN = re.compile(
-    r'(?P<player>.+?) the level (?P<level>\d+) (?P<race>.+?) (?P<class>.+?) has been slain by (?P<slain_by>.+?) in (?P<location>.+?)\.'
+    rf"^(?P<player>.+?) the level (?P<level>\d+) "
+    rf"(?P<race>{race_pattern}) (?P<class>{class_pattern}) "
+    rf"has been slain by (?P<slain_by>.+?) in (?P<location>.+?)"
+    rf"(?:\.)?(?:\s*/run\s+PlayHardcoreReplay\(\d+\))?\s*$"
 )
 
 class KillLogBot(discord.Client):
@@ -26,7 +36,7 @@ class KillLogBot(discord.Client):
 
             print(f"Fetching messages from #{source_channel.name}...")
             data = []
-            async for message in source_channel.history(limit=500):
+            async for message in source_channel.history(limit=None):
                 match = LOG_PATTERN.search(message.content)
                 if match:
                     data.append(match.groupdict())
@@ -65,8 +75,20 @@ class KillLogBot(discord.Client):
                 }
             }
             
-            resp = requests.post("https://quickchart.io/chart", json={"chart": chart_config, "width": 500, "height": 300})
-            chart_url = resp.json().get("url")
+            chart_url = None
+            try:
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(
+                        "https://quickchart.io/chart/create",
+                        json={"chart": chart_config, "width": 500, "height": 300},
+                    ) as response:
+                        response.raise_for_status()
+                        chart_result = await response.json()
+                        if isinstance(chart_result, dict):
+                            chart_url = chart_result.get("url")
+            except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
+                print(f"Could not generate chart: {e}")
 
             # Post results to target channel
             embed = discord.Embed(title="⚔️ Automated Kill Log Analysis", color=0xE74C3C)
@@ -85,4 +107,4 @@ class KillLogBot(discord.Client):
 intents = discord.Intents.default()
 intents.message_content = True
 client = KillLogBot(intents=intents)
-client.run(TOKEN)
+client.run(DISCORD_BOT_TOKEN)
