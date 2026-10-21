@@ -20,7 +20,7 @@ jobs:
 
       - name: Run extraction script
         env:
-          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           SOURCE_CHANNEL_ID: ${{ secrets.SOURCE_CHANNEL_ID }}
           TARGET_CHANNEL_ID: ${{ secrets.TARGET_CHANNEL_ID }}
         run: python main.py
