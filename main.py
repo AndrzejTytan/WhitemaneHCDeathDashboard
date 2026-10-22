@@ -163,8 +163,8 @@ class KillLogBot(discord.Client):
                 location = row['location']
                 location_deaths[location] = location_deaths.get(location, 0) + 1
 
-            top_mobs = sorted(mob_deaths.items(), key=lambda item: (-item[1], item[0]))[:5]
-            top_locations = sorted(location_deaths.items(), key=lambda item: (-item[1], item[0]))[:5]
+            top_mobs = sorted(mob_deaths.items(), key=lambda item: (-item[1], item[0]))[:10]
+            top_locations = sorted(location_deaths.items(), key=lambda item: (-item[1], item[0]))[:10]
             class_totals = sorted(class_deaths.items(), key=lambda item: (-item[1], item[0]))
             special_deaths = {
                 source: mob_deaths.get(source, 0)
@@ -179,8 +179,8 @@ class KillLogBot(discord.Client):
                     [CLASS_COLORS[item[0]] for item in class_totals],
                 ),
                 ("Deaths by Level Bracket", list(level_deaths), list(level_deaths.values()), None),
-                ("Top 5 Most Dangerous Mobs", [item[0] for item in top_mobs], [item[1] for item in top_mobs], None),
-                ("Top 5 Most Dangerous Locations", [item[0] for item in top_locations], [item[1] for item in top_locations], None),
+                ("Top 10 Most Dangerous Mobs", [item[0] for item in top_mobs], [item[1] for item in top_mobs], None),
+                ("Top 10 Most Dangerous Locations", [item[0] for item in top_locations], [item[1] for item in top_locations], None),
                 ("Special Deaths by Source", list(special_deaths), list(special_deaths.values()), None),
             ]
 
