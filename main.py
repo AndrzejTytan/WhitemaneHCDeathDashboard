@@ -13,7 +13,7 @@ TARGET_CHANNEL_ID = int(os.environ.get('TARGET_CHANNEL_ID', 0))
 
 RACES = ("Blood Elf", "Night Elf", "Draenei", "Dwarf", "Gnome", "Human", "Orc", "Tauren", "Troll", "Undead")
 CLASSES = ("Death Knight", "Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior")
-SPECIAL_DEATH_SOURCES = ("Warlord Krom'zar", "himself/herself")
+SPECIAL_DEATH_SOURCES = ("Warlord Krom'zar", "himself/herself", "Somnus", "Kobold")
 CLASS_COLORS = {
     "Death Knight": "#C41E3A",
     "Druid": "#FF7C0A",
@@ -53,7 +53,15 @@ def make_chart_config(labels, values, colors=None):
         "options": {
             "indexAxis": "x",
             "legend": {"display": False},
-            "plugins": {"legend": {"display": False}},
+            "plugins": {
+                "legend": {"display": False},
+                "datalabels": {
+                    "anchor": "end",
+                    "align": "top",
+                    "color": "#FFFFFF",
+                    "font": {"weight": "bold"},
+                },
+            },
             "scales": {
                 "yAxes": [{
                     "ticks": {
@@ -167,9 +175,20 @@ class KillLogBot(discord.Client):
             top_locations = sorted(location_deaths.items(), key=lambda item: (-item[1], item[0]))[:10]
             class_totals = sorted(class_deaths.items(), key=lambda item: (-item[1], item[0]))
             special_deaths = {
-                source: mob_deaths.get(source, 0)
+                source: (
+                    sum(
+                        count
+                        for mob, count in mob_deaths.items()
+                        if "kobold" in mob.casefold()
+                    )
+                    if source == "Kobold"
+                    else mob_deaths.get(source, 0)
+                )
                 for source in SPECIAL_DEATH_SOURCES
             }
+            special_deaths = dict(
+                sorted(special_deaths.items(), key=lambda item: (-item[1], item[0]))
+            )
 
             chart_specs = [
                 (
